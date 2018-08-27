@@ -1,0 +1,10 @@
+Uniform Language Model:
+correct: 31 total: 471 accuracy: 0.065817
+Laplace Unigram Language Model:
+correct: 52 total: 471 accuracy: 0.110403
+Laplace Bigram Language Model:
+correct: 63 total: 471 accuracy: 0.133758
+Stupid Backoff Language Model:
+correct: 88 total: 471 accuracy: 0.186837
+Custom Language Model:
+correct: 115 total: 471 accuracy: 0.244161
