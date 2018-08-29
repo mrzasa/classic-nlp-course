@@ -16,6 +16,9 @@ import sys
 import getopt
 import os
 import math
+import collections
+import matplotlib.pyplot as plt
+import operator
 
 class NaiveBayes:
   class TrainSplit:
@@ -40,33 +43,70 @@ class NaiveBayes:
     self.stopList = set(self.readFile('../data/english.stop'))
     self.numFolds = 10
 
+    self.words = set()
+    self.counts = { 'pos': collections.defaultdict(lambda: 1), 'neg': collections.defaultdict(lambda: 1) }
+    self.docCount = collections.defaultdict(lambda: 0)
+
   #############################################################################
   # TODO TODO TODO TODO TODO
 
+    #############################################################################
+    # TODO TODO TODO TODO TODO
+
+  def draw(self):
+      pass
+      #print(sorted(self.counts['pos'].items(), key=lambda x:-x[1]))
+      #print(sorted(self.counts['neg'].items(), key=lambda x:-x[1]))
+      #plt.bar(self.counts['pos'].keys(), self.counts['pos'].values())
+      #plt.show()
+
   def classify(self, words):
-    """ TODO
-      'words' is a list of words to classify. Return 'pos' or 'neg' classification.
-    """
-    return 'pos'
+      #print("WORDS:", words)
+      probs = { 'pos': 0.0, 'neg': 0.0 }
+      for klass in ['pos', 'neg']:
+        wordProbs = {}
+        totalCount = float(sum(self.counts[klass].values()) - len(self.counts[klass]) + len(self.words))
+        for word in words:
+            if not word in self.words:
+                continue
+            prob = self.counts[klass][word] / totalCount
+            wordProbs[word] = prob
+            probs[klass] += math.log(prob)
+        probs[klass] += math.log(self.docCount[klass]/float(sum(self.docCount.values())))
+
+        sortedWordProbs = sorted(wordProbs.items(), key=lambda x:-x[1])
+        #print klass
+        #print sortedWordProbs
+      #print("PROBS:", probs)
+      res = max(probs.iteritems(), key=operator.itemgetter(1))[0]
+      #print("RES:", res)
+        #plt.bar(map(lambda x:x[0], sortedWordProbs), map(lambda x:x[1], sortedWordProbs))
+        #plt.show()
+      return res
 
 
   def addExample(self, klass, words):
-    """
-     * TODO
-     * Train your model on an example document with label klass ('pos' or 'neg') and
-     * words, a list of strings.
-     * You should store whatever data structures you use for your classifier
-     * in the NaiveBayes class.
-     * Returns nothing
-    """
-    pass
+      """
+      * TODO
+      * Train your model on an example document with label klass ('pos' or 'neg') and
+      * words, a list of strings.
+      * You should store whatever data structures you use for your classifier
+      * in the NaiveBayes class.
+      * Returns nothing
+      """
+      self.docCount[klass] += 1
+      for word in words:
+          self.words.add(word)
+          self.counts[klass][word] += 1
+      pass
 
   def filterStopWords(self, words):
-    """
-    * TODO
-    * Filters stop words found in self.stopList.
-    """
-    return words
+       filtered = list(set(words) - self.stopList)
+       #print filtered
+       return filtered
+
+  # TODO TODO TODO TODO TODO
+  #############################################################################
 
   # TODO TODO TODO TODO TODO
   #############################################################################
@@ -243,6 +283,7 @@ def main():
         words =  classifier.filterStopWords(words)
       classifier.addExample(example.klass, words)
 
+    classifier.draw()
     for example in split.test:
       words = example.words
       if nb.FILTER_STOP_WORDS:
