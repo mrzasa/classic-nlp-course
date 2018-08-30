@@ -101,8 +101,28 @@ class NaiveBayes:
       pass
 
   def filterStopWords(self, words):
+      return self.filterStopWordsDict(words)
+      # return self.filterStopWordsStats(words)
+
+  # results similar to no filtering, require changing the  main() code
+  def filterStopWordsStats(self, words):
+      maxCount = 0
+      treshold = 0.9
+      for w in words:
+        count = self.totalCount(w)
+        if count > maxCount:
+            maxCount = count
+
+      filtered = [w for w in words if self.totalCount(w) < 0.95 * maxCount]
+      return filtered
+
+  def totalCount(self, w):
+    total = self.counts['pos'][w] + self.counts['neg'][w]
+    # print w, total
+    return total
+
+  def filterStopWordsDict(self, words):
        filtered = list(set(words) - self.stopList)
-       #print filtered
        return filtered
 
   # TODO TODO TODO TODO TODO
@@ -280,7 +300,7 @@ def main():
     for example in split.train:
       words = example.words
       if nb.FILTER_STOP_WORDS:
-        words =  classifier.filterStopWords(words)
+        words = classifier.filterStopWords(words)
       classifier.addExample(example.klass, words)
 
     classifier.draw()
