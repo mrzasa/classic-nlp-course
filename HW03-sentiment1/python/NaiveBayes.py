@@ -19,6 +19,101 @@ import math
 import collections
 import matplotlib.pyplot as plt
 import operator
+import re
+
+from shutil import copyfile
+
+class BayesClassifier:
+    def __init__(self, modelName):
+        self.words = set()
+        self.counts = { 'pos': collections.defaultdict(lambda: 1), 'neg': collections.defaultdict(lambda: 1) }
+        self.docCount = collections.defaultdict(lambda: 0)
+        self.documentModel = self.__getDocumentModel(modelName)
+
+    class SimpleModel:
+        def words(self, words):
+            return words
+
+    class BooleanNegationModel:
+        def __init__(self):
+            self.negation = BayesClassifier.NegationModel()
+            self.boolean = BayesClassifier.BooleanModel()
+
+        def words(self, words):
+            return self.boolean.words(self.negation.words(words))
+
+    class BooleanModel:
+        def words(self, words):
+            return list(set(words))
+
+    class NegationModel:
+        eos_pattern = re.compile('^[-.!?,;"\'():]$')
+        negation_pattern = re.compile('(^not|n\'t|^no|^never|^nor|^neither|^none|^nothing|^non)$')
+
+        def words(self, words):
+            filtered = []
+            negated = False
+            for word in words:
+                filtered.append(self._maybe_negate(word, negated))
+                if not negated and self._is_negation(word):
+                    negated = True
+                if self._is_eos(word):
+                    negated = False
+
+            # print(words, filtered)
+            return filtered
+
+
+        def _maybe_negate(self, word, negate):
+            if negate:
+                return "NOT_%s" % word
+            else:
+                return word
+
+        def _is_negation(self, word):
+            return bool(self.negation_pattern.search(word))
+
+        def _is_eos(self, word):
+            return bool(self.eos_pattern.match(word))
+
+    def __getDocumentModel(self, name):
+        if name == 'simple':
+            return self.SimpleModel()
+        elif name == 'boolean':
+            return self.BooleanModel()
+        elif name == 'negation':
+            return self.NegationModel()
+        elif name == 'boolean_negation':
+            return self.BooleanNegationModel()
+        else:
+            raise ValueError('Invalid document model name.')
+
+
+    def classify(self, words):
+        transformedWords = self.documentModel.words(words)
+        probs = { 'pos': 0.0, 'neg': 0.0 }
+        for klass in ['pos', 'neg']:
+            wordProbs = {}
+            totalCount = float(sum(self.counts[klass].values()) - len(self.counts[klass]) + len(self.words))
+            for word in transformedWords:
+                if not word in self.words:
+                    continue
+                prob = self.counts[klass][word] / totalCount
+                wordProbs[word] = prob
+                probs[klass] += math.log(prob)
+            probs[klass] += math.log(self.docCount[klass]/float(sum(self.docCount.values())))
+
+        sortedWordProbs = sorted(wordProbs.items(), key=lambda x:-x[1])
+        res = max(probs.iteritems(), key=operator.itemgetter(1))[0]
+        return res
+
+
+    def addExample(self, klass, words):
+        self.docCount[klass] += 1
+        ww = self.documentModel.words(words)
+        for word in ww:
+            self.words.add(word)
+            self.counts[klass][word] += 1
 
 class NaiveBayes:
   class TrainSplit:
@@ -35,6 +130,7 @@ class NaiveBayes:
     def __init__(self):
       self.klass = ''
       self.words = []
+      self.filename = ''
 
 
   def __init__(self):
@@ -43,66 +139,20 @@ class NaiveBayes:
     self.stopList = set(self.readFile('../data/english.stop'))
     self.numFolds = 10
 
-    self.words = set()
-    self.counts = { 'pos': collections.defaultdict(lambda: 1), 'neg': collections.defaultdict(lambda: 1) }
-    self.docCount = collections.defaultdict(lambda: 0)
+    #self.classifier = BayesClassifier('boolean_negation')
+    #self.classifier = BayesClassifier('negation')
+    #self.classifier = BayesClassifier('simple')
+    self.classifier = BayesClassifier('boolean')
 
-  #############################################################################
-  # TODO TODO TODO TODO TODO
-
-    #############################################################################
-    # TODO TODO TODO TODO TODO
-
-  def draw(self):
-      pass
-      #print(sorted(self.counts['pos'].items(), key=lambda x:-x[1]))
-      #print(sorted(self.counts['neg'].items(), key=lambda x:-x[1]))
-      #plt.bar(self.counts['pos'].keys(), self.counts['pos'].values())
-      #plt.show()
 
   def classify(self, words):
-      #print("WORDS:", words)
-      probs = { 'pos': 0.0, 'neg': 0.0 }
-      for klass in ['pos', 'neg']:
-        wordProbs = {}
-        totalCount = float(sum(self.counts[klass].values()) - len(self.counts[klass]) + len(self.words))
-        for word in words:
-            if not word in self.words:
-                continue
-            prob = self.counts[klass][word] / totalCount
-            wordProbs[word] = prob
-            probs[klass] += math.log(prob)
-        probs[klass] += math.log(self.docCount[klass]/float(sum(self.docCount.values())))
-
-        sortedWordProbs = sorted(wordProbs.items(), key=lambda x:-x[1])
-        #print klass
-        #print sortedWordProbs
-      #print("PROBS:", probs)
-      res = max(probs.iteritems(), key=operator.itemgetter(1))[0]
-      #print("RES:", res)
-        #plt.bar(map(lambda x:x[0], sortedWordProbs), map(lambda x:x[1], sortedWordProbs))
-        #plt.show()
-      return res
-
+      return self.classifier.classify(words)
 
   def addExample(self, klass, words):
-      """
-      * TODO
-      * Train your model on an example document with label klass ('pos' or 'neg') and
-      * words, a list of strings.
-      * You should store whatever data structures you use for your classifier
-      * in the NaiveBayes class.
-      * Returns nothing
-      """
-      self.docCount[klass] += 1
-      for word in words:
-          self.words.add(word)
-          self.counts[klass][word] += 1
-      pass
+      return self.classifier.addExample(klass, words)
 
   def filterStopWords(self, words):
       return self.filterStopWordsDict(words)
-      # return self.filterStopWordsStats(words)
 
   # results similar to no filtering, require changing the  main() code
   def filterStopWordsStats(self, words):
@@ -118,18 +168,11 @@ class NaiveBayes:
 
   def totalCount(self, w):
     total = self.counts['pos'][w] + self.counts['neg'][w]
-    # print w, total
     return total
 
   def filterStopWordsDict(self, words):
        filtered = list(set(words) - self.stopList)
        return filtered
-
-  # TODO TODO TODO TODO TODO
-  #############################################################################
-
-  # TODO TODO TODO TODO TODO
-  #############################################################################
 
 
   def readFile(self, fileName):
@@ -233,6 +276,7 @@ class NaiveBayes:
           example = self.Example()
           example.words = self.readFile('%s/pos/%s' % (trainDir, fileName))
           example.klass = 'pos'
+          example.fileName = fileName
           if fileName[2] == str(fold):
             split.test.append(example)
           else:
@@ -241,6 +285,7 @@ class NaiveBayes:
           example = self.Example()
           example.words = self.readFile('%s/neg/%s' % (trainDir, fileName))
           example.klass = 'neg'
+          example.fileName = fileName
           if fileName[2] == str(fold):
             split.test.append(example)
           else:
@@ -256,11 +301,13 @@ class NaiveBayes:
         example = self.Example()
         example.words = self.readFile('%s/pos/%s' % (trainDir, fileName))
         example.klass = 'pos'
+        example.fileName = fileName
         split.train.append(example)
       for fileName in negTrainFileNames:
         example = self.Example()
         example.words = self.readFile('%s/neg/%s' % (trainDir, fileName))
         example.klass = 'neg'
+        example.fileName = fileName
         split.train.append(example)
 
       posTestFileNames = os.listdir('%s/pos/' % testDir)
@@ -294,6 +341,7 @@ def main():
   splits = nb.buildSplits(args)
   avgAccuracy = 0.0
   fold = 0
+  failed = []
   for split in splits:
     classifier = NaiveBayes()
     accuracy = 0.0
@@ -303,7 +351,6 @@ def main():
         words = classifier.filterStopWords(words)
       classifier.addExample(example.klass, words)
 
-    classifier.draw()
     for example in split.test:
       words = example.words
       if nb.FILTER_STOP_WORDS:
@@ -311,11 +358,16 @@ def main():
       guess = classifier.classify(words)
       if example.klass == guess:
         accuracy += 1.0
+      else:
+        failed.append(example)
 
     accuracy = accuracy / len(split.test)
     avgAccuracy += accuracy
     print '[INFO]\tFold %d Accuracy: %f' % (fold, accuracy)
     fold += 1
+    #for e in failed:
+    #    print(e.klass, e.fileName)
+    #    copyfile(args[0] + '/' + e.klass + '/' + e.fileName, '../data/failed/' + e.klass + '/' + e.fileName)
   avgAccuracy = avgAccuracy / fold
   print '[INFO]\tAccuracy: %f' % avgAccuracy
 
