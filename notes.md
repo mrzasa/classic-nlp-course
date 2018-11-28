@@ -13,7 +13,7 @@
   * http://smithamilli.com/blog/kneser-ney/
 
 
-## Named Entity Recognition
+## Named Entity Recognition (ex. 4)
 
 * Assignment seemed to be easy (just preparing features, ML method provided by the profs), but it was really difficult and time consuming. Two reasons - test run takes about 5 mins and features need to be added a bit blindly.
 * Would be nice to see how feature scores impact the final result. I tried to dig into java ML code, but failed.
