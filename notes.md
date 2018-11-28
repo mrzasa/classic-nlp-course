@@ -32,3 +32,11 @@
     * is current word on a list of popular names
     * is previous/next word one of specific verbs (mostly related to speaking)
   * in all cases listed above, lists were quite arbitrary - if some words increased the score, they were kept, if not - they were removed
+  
+### References
+* https://stackoverflow.com/questions/42001875/named-entity-recognition-ner-features
+* https://datascience.stackexchange.com/questions/16704/named-entity-recognition-ner-features
+* https://cocoxu.github.io/publications/PACLIC07_Using.pdf
+* https://ieeexplore.ieee.org/document/6999199
+* http://ceur-ws.org/Vol-1691/paper_10.pdf
+* http://www.oegai.at/konvens2012/proceedings/17_tkachenko12o/17_tkachenko12o.pdf
